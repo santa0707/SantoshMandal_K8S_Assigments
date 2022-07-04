@@ -1,0 +1,191 @@
+########################################################################################################################################################################
+                                                              ASSIGNMENT_1 : ReplicaSet
+########################################################################################################################################################################
+1) Differences between "kubia-rc.yaml" and "kubia-replicaset.yaml"
+  A)  KIND :: 
+            # kind in kubia-rc.yaml is -> ReplicationController
+            # kind in kubia-replicaset.yaml is -> ReplicaSet
+  
+  B) SELECTORS/matchLabels::
+            # In kubia-rc.yaml file there no attribute like matchLabels whereas in kubia-replicaset.yaml, attribute matchLabels under selector exists
+            
+  C) ContainerPort ::
+            # In kubia-rc.yaml file there is attribute "containerPort" whereas as in kubia-replicaset.yaml no such attribute
+            
+  ** sdiff output of 2 files:
+_________________________________________________________________________________________________________________________________________________________________
+  [root@ip-172-31-23-162 04-controllers]# sdiff -s kubia-rc.yaml /root/kubernetes-training/05-services/kubia-replicaset.yaml
+apiVersion: v1                                                | apiVersion: apps/v1
+kind: ReplicationController                                   | kind: ReplicaSet
+  name: kubia2                                                |   name: kubia
+    app: kubia                                                |     matchLabels:
+                                                              >       app: kubia
+        ports:                                                <
+        - containerPort: 8080                                 <
+[root@ip-172-31-23-162 04-controllers]#
+__________________________________________________________________________________________________________________________________________________________________
+  
+2) Run the kubia-replicaset.yaml 
+__________________________________________________________________________________________________________________________________________________________________
+[root@ip-172-31-23-162 05-services]# kubectl apply -f kubia-replicaset.yaml
+replicaset.apps/kubia created
+[root@ip-172-31-23-162 05-services]# 
+__________________________________________________________________________________________________________________________________________________________________
+
+
+3) Commands list can be run after "kubectl apply...."
+  a) kubectl get po -> to get pod replicas details
+  b) kubectl get rs -> to get replicate set details
+  c) kubectl delete rs <controller name> -> to delete replica set insatead of deleting POD(if PODs not required deleting pod will auto recreate, to avoid use it)
+  d) kubectl scale rs <controller name> --replicas=<no of replicas to be scaled>
+___________________________________________________________________________________________________________________________________________________________________
+[root@ip-172-31-23-162 05-services]# kubectl apply -f kubia-replicaset.yaml
+replicaset.apps/kubia created
+[root@ip-172-31-23-162 05-services]# kubectl get po
+NAME             READY   STATUS              RESTARTS   AGE
+kubia-4ntk8      0/1     ContainerCreating   0          8s
+kubia-cs4kx      0/1     ContainerCreating   0          8s
+kubia-jxmsr      0/1     ContainerCreating   0          8s
+santoshm-nginx   1/1     Running             0          5d18h
+
+[root@ip-172-31-23-162 05-services]# kubectl get po
+NAME             READY   STATUS    RESTARTS   AGE
+kubia-4ntk8      1/1     Running   0          54s
+kubia-cs4kx      1/1     Running   0          54s
+kubia-jxmsr      1/1     Running   0          54s
+santoshm-nginx   1/1     Running   0          5d18h
+[root@ip-172-31-23-162 05-services]# kubectl get rs
+NAME    DESIRED   CURRENT   READY   AGE
+kubia   3         3         3       4m15s
+
+[root@ip-172-31-23-162 05-services]#  kubectl scale rs kubia --replicas=4
+replicaset.apps/kubia scaled
+
+[root@ip-172-31-23-162 05-services]# kubectl get rs
+NAME    DESIRED   CURRENT   READY   AGE
+kubia   4         4         4       18m
+[root@ip-172-31-23-162 05-services]# kubectl get po
+NAME             READY   STATUS    RESTARTS   AGE
+kubia-4ntk8      1/1     Running   0          18m
+kubia-bqcbg      1/1     Running   0          84s
+kubia-cs4kx      1/1     Running   0          18m
+kubia-jxmsr      1/1     Running   0          18m
+santoshm-nginx   1/1     Running   0          5d18h
+
+
+[root@ip-172-31-23-162 05-services]# kubectl delete po kubia-jxmsr
+pod "kubia-jxmsr" deleted
+^C
+
+[root@ip-172-31-23-162 05-services]# kubectl get po
+NAME             READY   STATUS        RESTARTS   AGE
+kubia-4ntk8      1/1     Running       0          26m
+kubia-856kx      1/1     Running       0          21s
+kubia-bqcbg      1/1     Running       0          8m36s
+kubia-cs4kx      1/1     Running       0          26m
+kubia-jxmsr      1/1     Terminating   0          26m
+santoshm-nginx   1/1     Running       0          5d18h
+[root@ip-172-31-23-162 05-services]#
+
+[root@ip-172-31-23-162 05-services]# kubectl delete rs kubia
+replicaset.apps "kubia" deleted
+[root@ip-172-31-23-162 05-services]#
+
+[root@ip-172-31-23-162 05-services]# kubectl get rs
+No resources found in default namespace.
+[root@ip-172-31-23-162 05-services]#
+___________________________________________________________________________________________________________________________________________________________________
+
+4) service over pods (kubia-replicaset) 
+___________________________________________________________________________________________________________________________________________________________________
+[root@ip-172-31-23-162 ~]# kubectl get po -o wide
+NAME          READY   STATUS    RESTARTS   AGE   IP                NODE                                               NOMINATED NODE   READINESS GATES
+kubia-2mbdc   1/1     Running   0          63m   192.168.163.202   ip-172-31-22-169.ap-southeast-1.compute.internal   <none>           <none>
+kubia-nzz8j   1/1     Running   0          63m   192.168.163.203   ip-172-31-22-169.ap-southeast-1.compute.internal   <none>           <none>
+kubia-vjpsl   1/1     Running   0          63m   192.168.163.201   ip-172-31-22-169.ap-southeast-1.compute.internal   <none>           <none>
+[root@ip-172-31-23-162 ~]# curl 192.168.163.202:8080
+You've hit kubia-2mbdc
+[root@ip-172-31-23-162 ~]# curl 192.168.163.203:8080
+You've hit kubia-nzz8j
+[root@ip-172-31-23-162 ~]# curl 192.168.163.201:8080
+You've hit kubia-vjpsl
+[root@ip-172-31-23-162 ~]#
+[root@ip-172-31-23-162 ~]#
+___________________________________________________________________________________________________________________________________________________________________
+
+5) Negative Testing : change the labels of the pod and see if the service is still applied on those pods
+  Observations: 
+    A) When POD labels are changed another set of POS with old label started to create, in my example POD label on all 3 pods changed and 3 new pods with old label get       created.
+    B) On old pods, old IPs address remains same 
+    C) New pods created with new IP address and old label
+    D) Services are still applied on the PODs
+ Demo from LAB:
+___________________________________________________________________________________________________________________________________________________________________
+[root@ip-172-31-23-162 05-services]# kubectl apply -f kubia-replicaset.yaml
+replicaset.apps/kubia created
+
+[root@ip-172-31-23-162 05-services]# kubectl get po -o wide
+NAME          READY   STATUS    RESTARTS   AGE   IP                NODE                                               NOMINATED NODE   READINESS GATES
+kubia-488km   1/1     Running   0          15s   192.168.163.211   ip-172-31-22-169.ap-southeast-1.compute.internal   <none>           <none>
+kubia-qf6d6   1/1     Running   0          15s   192.168.163.210   ip-172-31-22-169.ap-southeast-1.compute.internal   <none>           <none>
+kubia-qkhzv   1/1     Running   0          15s   192.168.163.212   ip-172-31-22-169.ap-southeast-1.compute.internal   <none>           <none>
+
+[root@ip-172-31-23-162 05-services]# kubectl get po --show-labels
+NAME          READY   STATUS    RESTARTS   AGE   LABELS
+kubia-488km   1/1     Running   0          28s   app=kubia
+kubia-qf6d6   1/1     Running   0          28s   app=kubia
+kubia-qkhzv   1/1     Running   0          28s   app=kubia
+
+[root@ip-172-31-23-162 05-services]# curl 192.168.163.210:8080
+You've hit kubia-qf6d6
+[root@ip-172-31-23-162 05-services]# curl 192.168.163.211:8080
+You've hit kubia-488km
+[root@ip-172-31-23-162 05-services]# curl 192.168.163.212:8080
+You've hit kubia-qkhzv
+
+[root@ip-172-31-23-162 05-services]# kubectl label po kubia-qf6d6 --overwrite app=kubia_labelChange_test_IP_210
+pod/kubia-qf6d6 labeled
+[root@ip-172-31-23-162 05-services]# kubectl label po kubia-488km --overwrite app=kubia_labelChange_test_IP_211
+pod/kubia-488km labeled
+[root@ip-172-31-23-162 05-services]# kubectl label po kubia-qkhzv --overwrite app=kubia_labelChange_test_IP_212
+pod/kubia-qkhzv labeled
+
+[root@ip-172-31-23-162 05-services]# kubectl get po --show-labels
+NAME          READY   STATUS    RESTARTS   AGE     LABELS
+kubia-488km   1/1     Running   0          3m33s   app=kubia_labelChange_test_IP_211
+kubia-fd8k5   1/1     Running   0          20s     app=kubia
+kubia-fl26p   1/1     Running   0          64s     app=kubia
+kubia-n5zwg   1/1     Running   0          43s     app=kubia
+kubia-qf6d6   1/1     Running   0          3m33s   app=kubia_labelChange_test_IP_210
+kubia-qkhzv   1/1     Running   0          3m33s   app=kubia_labelChange_test_IP_212
+
+[root@ip-172-31-23-162 05-services]# kubectl get po -o wide
+NAME          READY   STATUS    RESTARTS   AGE   IP                NODE                                               NOMINATED NODE   READINESS GATES
+kubia-488km   1/1     Running   0          4m    192.168.163.211   ip-172-31-22-169.ap-southeast-1.compute.internal   <none>           <none>
+kubia-fd8k5   1/1     Running   0          47s   192.168.163.215   ip-172-31-22-169.ap-southeast-1.compute.internal   <none>           <none>
+kubia-fl26p   1/1     Running   0          91s   192.168.163.213   ip-172-31-22-169.ap-southeast-1.compute.internal   <none>           <none>
+kubia-n5zwg   1/1     Running   0          70s   192.168.163.214   ip-172-31-22-169.ap-southeast-1.compute.internal   <none>           <none>
+kubia-qf6d6   1/1     Running   0          4m    192.168.163.210   ip-172-31-22-169.ap-southeast-1.compute.internal   <none>           <none>
+kubia-qkhzv   1/1     Running   0          4m    192.168.163.212   ip-172-31-22-169.ap-southeast-1.compute.internal   <none>           <none>
+
+[root@ip-172-31-23-162 05-services]# curl 192.168.163.210:8080
+You've hit kubia-qf6d6
+[root@ip-172-31-23-162 05-services]# curl 192.168.163.211:8080
+You've hit kubia-488km
+[root@ip-172-31-23-162 05-services]# curl 192.168.163.212:8080
+You've hit kubia-qkhzv
+
+[root@ip-172-31-23-162 05-services]# curl 192.168.163.213:8080
+You've hit kubia-fl26p
+[root@ip-172-31-23-162 05-services]# curl 192.168.163.214:8080
+You've hit kubia-n5zwg
+[root@ip-172-31-23-162 05-services]# curl 192.168.163.215:8080
+You've hit kubia-fd8k5
+[root@ip-172-31-23-162 05-services]#
+___________________________________________________________________________________________________________________________________________________________________
+
+
+
+
+
+
