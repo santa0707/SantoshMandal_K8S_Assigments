@@ -75,7 +75,6 @@ santoshm-nginx   1/1     Running   0          5d18h
 
 [root@ip-172-31-23-162 05-services]# kubectl delete po kubia-jxmsr
 pod "kubia-jxmsr" deleted
-^C
 
 [root@ip-172-31-23-162 05-services]# kubectl get po
 NAME             READY   STATUS        RESTARTS   AGE
@@ -119,6 +118,9 @@ ________________________________________________________________________________
     B) On old pods, old IPs address remains same 
     C) New pods created with new IP address and old label
     D) Services are still applied on the PODs
+    E) when rs is deleted, then only those PODs(newly created one with original label) gets deleted and those olds PODs which are assigned new labels continue to run
+      since its label is different than the yaml file and thus kubectl delete only those pods with label mentioned as per yaml file
+      
  Demo from LAB:
 ___________________________________________________________________________________________________________________________________________________________________
 [root@ip-172-31-23-162 05-services]# kubectl apply -f kubia-replicaset.yaml
@@ -182,10 +184,257 @@ You've hit kubia-n5zwg
 [root@ip-172-31-23-162 05-services]# curl 192.168.163.215:8080
 You've hit kubia-fd8k5
 [root@ip-172-31-23-162 05-services]#
+
+[root@ip-172-31-23-162 04-controllers]# kubectl delete rs kubia
+replicaset.apps "kubia" deleted
+
+[root@ip-172-31-23-162 04-controllers]# kubectl get pod
+NAME          READY   STATUS        RESTARTS   AGE
+kubia-488km   1/1     Running       0          23m
+kubia-fd8k5   1/1     Terminating   0          20m
+kubia-fl26p   1/1     Terminating   0          21m
+kubia-n5zwg   1/1     Terminating   0          21m
+kubia-qf6d6   1/1     Running       0          23m
+kubia-qkhzv   1/1     Running       0          23m
+[root@ip-172-31-23-162 04-controllers]# 
 ___________________________________________________________________________________________________________________________________________________________________
 
+########################################################################################################################################################################
+                                                              ASSIGNMENT_2 : Cronjob
+########################################################################################################################################################################
 
+1) go to cronjob.yaml (/root/kubernetes-training/04-controllers) -> DONE
+2) Open the file and change the 1st line to (apiVersion: batch/v1beta1). -> DONE
+3) Run this file -> DONE
+4) Find out what is the command to "get" the running jobs. 
+    --> kubectl get jobs
+5) Observe and if possible, paste the results from your practicals.
+    A) Wheren  job is running, the POD status is running and job is 0 of 1 like 0/1
+___________________________________________________________________________________________________________________________________________________________________    
+[root@ip-172-31-23-162 04-controllers]# kubectl apply -f cronjob.yaml
+cronjob.batch/batch-job-every-fifteen-minutes created
+[root@ip-172-31-23-162 04-controllers]#
 
+[root@ip-172-31-23-162 04-controllers]# kubectl get jobs
+NAME                                         COMPLETIONS   DURATION      AGE
+batch-job-every-fifteen-minutes-1656946800      0/1           85s        85s
+[root@ip-172-31-23-162 04-controllers]# kubectl get po
+NAME                                               READY   STATUS      RESTARTS   AGE
+batch-job-every-fifteen-minutes-1656946800-tfdxq   1/1     Running     0          96s
+[root@ip-172-31-23-162 04-controllers]#
+___________________________________________________________________________________________________________________________________________________________________   
 
+  B) When the JOB is completed, the completion becomes 1 of 1 1/1 and the POD status is completed and ready is 0/1
+   ## For completed PODS :: --> Status = Succeeded, state is Terminated and reason is completed || same can be verified via describe pod 
+___________________________________________________________________________________________________________________________________________________________________      
+[root@ip-172-31-23-162 04-controllers]# kubectl describe po batch-job-every-fifteen-minutes-1656946800-tfdxq
+Name:         batch-job-every-fifteen-minutes-1656946800-tfdxq
+Namespace:    default
+Priority:     0
+Node:         ip-172-31-22-169.ap-southeast-1.compute.internal/172.31.22.169
+Start Time:   Mon, 04 Jul 2022 15:00:09 +0000
+Labels:       app=periodic-batch-job
+              controller-uid=3ac46890-680b-4df5-addc-6d524640f8b7
+              job-name=batch-job-every-fifteen-minutes-1656946800
+Annotations:  <none>
+Status:       Succeeded
+IP:           192.168.163.218
+IPs:
+  IP:           192.168.163.218
+Controlled By:  Job/batch-job-every-fifteen-minutes-1656946800
+Containers:
+  main:
+    Container ID:   docker://345587003ae53d8471c3a0b7ace08b8bd69edda69250a8ae14a69afbd4b170d0
+    Image:          luksa/batch-job
+    Image ID:       docker-pullable://luksa/batch-job@sha256:572a3eba91f3349063f7eb00c03cdb5e1b8f50ca88b8cdf30df8ae218564055b
+    Port:           <none>
+    Host Port:      <none>
+    State:          Terminated
+      Reason:       Completed
+      Exit Code:    0
+      Started:      Mon, 04 Jul 2022 15:00:13 +0000
+      Finished:     Mon, 04 Jul 2022 15:02:13 +0000
+    Ready:          False
+    Restart Count:  0
+    Environment:    <none>
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from default-token-8fz2k (ro)
+Conditions:
+  Type              Status
+  Initialized       True
+  Ready             False
+  ContainersReady   False
+  PodScheduled      True
+Volumes:
+  default-token-8fz2k:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  default-token-8fz2k
+    Optional:    false
+QoS Class:       BestEffort
+Node-Selectors:  <none>
+Tolerations:     node.kubernetes.io/not-ready:NoExecute for 300s
+                 node.kubernetes.io/unreachable:NoExecute for 300s
+Events:
+  Type    Reason     Age   From                                                       Message
+  ----    ------     ----  ----                                                       -------
+  Normal  Scheduled  11m   default-scheduler                                          Successfully assigned default/batch-job-every-fifteen-minutes-1656946800-tfdxq to ip-172-31-22-169.ap-southeast-1.compute.internal
+  Normal  Pulling    11m   kubelet, ip-172-31-22-169.ap-southeast-1.compute.internal  Pulling image "luksa/batch-job"
+  Normal  Pulled     11m   kubelet, ip-172-31-22-169.ap-southeast-1.compute.internal  Successfully pulled image "luksa/batch-job"
+  Normal  Created    11m   kubelet, ip-172-31-22-169.ap-southeast-1.compute.internal  Created container main
+  Normal  Started    11m   kubelet, ip-172-31-22-169.ap-southeast-1.compute.internal  Started container main
+___________________________________________________________________________________________________________________________________________________________________   
 
+  C) When the JOB is running, 
+   ## For running PODs :: --> Status = Running, State is  Runing with start time of the POD/JOB || same can be verified with describe pod
+___________________________________________________________________________________________________________________________________________________________________   
+[root@ip-172-31-23-162 04-controllers]# kubectl describe po batch-job-every-fifteen-minutes-1656947700-gx8dk
+Name:         batch-job-every-fifteen-minutes-1656947700-gx8dk
+Namespace:    default
+Priority:     0
+Node:         ip-172-31-22-169.ap-southeast-1.compute.internal/172.31.22.169
+Start Time:   Mon, 04 Jul 2022 15:15:00 +0000
+Labels:       app=periodic-batch-job
+              controller-uid=c9a89796-4801-4aed-9078-61ef26227c38
+              job-name=batch-job-every-fifteen-minutes-1656947700
+Annotations:  <none>
+Status:       Running
+IP:           192.168.163.219
+IPs:
+  IP:           192.168.163.219
+Controlled By:  Job/batch-job-every-fifteen-minutes-1656947700
+Containers:
+  main:
+    Container ID:   docker://767f4be0ff33b6d41f0366471dd20e5e2aaec1d54b3534f054ea040e49db340e
+    Image:          luksa/batch-job
+    Image ID:       docker-pullable://luksa/batch-job@sha256:572a3eba91f3349063f7eb00c03cdb5e1b8f50ca88b8cdf30df8ae218564055b
+    Port:           <none>
+    Host Port:      <none>
+    State:          Running
+      Started:      Mon, 04 Jul 2022 15:15:08 +0000
+    Ready:          True
+    Restart Count:  0
+    Environment:    <none>
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from default-token-8fz2k (ro)
+Conditions:
+  Type              Status
+  Initialized       True
+  Ready             True
+  ContainersReady   True
+  PodScheduled      True
+Volumes:
+  default-token-8fz2k:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  default-token-8fz2k
+    Optional:    false
+QoS Class:       BestEffort
+Node-Selectors:  <none>
+Tolerations:     node.kubernetes.io/not-ready:NoExecute for 300s
+                 node.kubernetes.io/unreachable:NoExecute for 300s
+Events:
+  Type    Reason     Age   From                                                       Message
+  ----    ------     ----  ----                                                       -------
+  Normal  Scheduled  46s   default-scheduler                                          Successfully assigned default/batch-job-every-fifteen-minutes-1656947700-gx8dk to ip-172-31-22-169.ap-southeast-1.compute.internal
+  Normal  Pulling    44s   kubelet, ip-172-31-22-169.ap-southeast-1.compute.internal  Pulling image "luksa/batch-job"
+  Normal  Pulled     38s   kubelet, ip-172-31-22-169.ap-southeast-1.compute.internal  Successfully pulled image "luksa/batch-job"
+  Normal  Created    38s   kubelet, ip-172-31-22-169.ap-southeast-1.compute.internal  Created container main
+  Normal  Started    38s   kubelet, ip-172-31-22-169.ap-southeast-1.compute.internal  Started container main
+[root@ip-172-31-23-162 04-controllers]#
+___________________________________________________________________________________________________________________________________________________________________   
+  
+  D) Jobs has great advantage, whenever its job is finished and completed, the container exit, this can be verified with completed JOB's pod, exec to conatiner fails
+     with message "cannot exec into a container in a completed pod; current phase is Succeeded"
+___________________________________________________________________________________________________________________________________________________________________
+  [root@ip-172-31-23-162 04-controllers]# kubectl get po
+NAME                                               READY   STATUS      RESTARTS   AGE
+batch-job-every-fifteen-minutes-1656949500-g5d92   0/1     Completed   0          4m18s
+[root@ip-172-31-23-162 04-controllers]#
 
+[root@ip-172-31-23-162 04-controllers]# kubectl exec -it batch-job-every-fifteen-minutes-1656949500-g5d92 -- sh
+error: cannot exec into a container in a completed pod; current phase is Succeeded
+[root@ip-172-31-23-162 04-controllers]#
+___________________________________________________________________________________________________________________________________________________________________
+
+6) Also identify how you would "permanently arrest" the jobs from running.
+  --> JOBS can be permanently arrested by 2 method
+        A) Use command :: kubectl delete jobs/<job name>  || this will delete single job & its corresponding pod permanently. 
+___________________________________________________________________________________________________________________________________________________________________
+[root@ip-172-31-23-162 ~]# kubectl get jobs
+NAME                                         COMPLETIONS   DURATION   AGE
+batch-job-every-fifteen-minutes-1656948600   1/1           2m5s       33m
+batch-job-every-fifteen-minutes-1656949500   1/1           2m3s       18m
+batch-job-every-fifteen-minutes-1656950400   1/1           2m4s       3m7s
+
+############ Here ↑ we have 3 JOBS and below is corresponding 3 completed POD ############
+
+[root@ip-172-31-23-162 ~]# kubectl get po
+NAME                                               READY   STATUS      RESTARTS   AGE
+batch-job-every-fifteen-minutes-1656948600-98s7r   0/1     Completed   0          33m
+batch-job-every-fifteen-minutes-1656949500-g5d92   0/1     Completed   0          18m
+batch-job-every-fifteen-minutes-1656950400-k2ndd   0/1     Completed   0          3m23s
+
+############ Delete one of the JOB --> batch-job-every-fifteen-minutes-1656948600 ############
+
+[root@ip-172-31-23-162 ~]# kubectl delete jobs/batch-job-every-fifteen-minutes-1656948600
+job.batch "batch-job-every-fifteen-minutes-1656948600" deleted
+
+[root@ip-172-31-23-162 ~]# kubectl get jobs
+NAME                                         COMPLETIONS   DURATION   AGE
+batch-job-every-fifteen-minutes-1656949500   1/1           2m3s       22m
+batch-job-every-fifteen-minutes-1656950400   1/1           2m4s       7m15s
+[root@ip-172-31-23-162 ~]#
+
+############ The JOB --> batch-job-every-fifteen-minutes-1656948600 gets deleted and below corresponding pods also gets deleted ############
+[root@ip-172-31-23-162 ~]# kubectl get po
+NAME                                               READY   STATUS      RESTARTS   AGE
+batch-job-every-fifteen-minutes-1656949500-g5d92   0/1     Completed   0          22m
+batch-job-every-fifteen-minutes-1656950400-k2ndd   0/1     Completed   0          7m9s
+___________________________________________________________________________________________________________________________________________________________________
+
+     B) Use command :: kubectl delete -f <file_from_which_jobCreated.yaml> || All jobs & its pods created via the yaml file will gets deleted permanently
+___________________________________________________________________________________________________________________________________________________________________     
+[root@ip-172-31-23-162 ~]# kubectl get jobs
+NAME                                         COMPLETIONS   DURATION   AGE
+batch-job-every-fifteen-minutes-1656949500   1/1           2m3s       22m
+batch-job-every-fifteen-minutes-1656950400   1/1           2m4s       7m15s
+[root@ip-172-31-23-162 ~]#
+
+[root@ip-172-31-23-162 ~]# kubectl get po
+NAME                                               READY   STATUS      RESTARTS   AGE
+batch-job-every-fifteen-minutes-1656949500-g5d92   0/1     Completed   0          22m
+batch-job-every-fifteen-minutes-1656950400-k2ndd   0/1     Completed   0          7m9s
+
+[root@ip-172-31-23-162 04-controllers]# kubectl delete -f cronjob.yaml
+cronjob.batch "batch-job-every-fifteen-minutes" deleted
+
+[root@ip-172-31-23-162 04-controllers]# kubectl get jobs
+No resources found in default namespace.
+
+[root@ip-172-31-23-162 04-controllers]# kubectl get po
+No resources found in default namespace.
+[root@ip-172-31-23-162 04-controllers]#
+___________________________________________________________________________________________________________________________________________________________________     
+     
+     
+
+7) What is the change from normal Jobs (jobs v/s cronJobs) - Your observation in one sentence.
+   --> Kind in normal job is JOB whereas in cronjob its CronJob
+   --> There is schedule in cronjob where user can preset as time/day/week/month/year when the specific job may run.
+___________________________________________________________________________________________________________________________________________________________________     
+[root@ip-172-31-23-162 04-controllers]# sdiff -s batch-job.yaml cronjob.yaml
+apiVersion: batch/v1                                          | apiVersion: batch/v1beta1
+kind: Job                                                     | kind: CronJob
+  name: batch-job                                             |   name: batch-job-every-fifteen-minutes
+  template:                                                   |   schedule: "0,15,30,45 * * * *"
+    metadata:                                                 |   jobTemplate:
+___________________________________________________________________________________________________________________________________________________________________     
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
