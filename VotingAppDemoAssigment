@@ -1,0 +1,112 @@
+################################################################################################################################################################
+                                                              ASSIGNMENT_3 : Voting App Demo
+################################################################################################################################################################
+
+1. go to root (cd /root/ ) . (both Master and Worker can perform this in their instances)
+    --> Done
+2. git clone https://github.com/ashishrpandey/example-voting-app
+    --> Done 
+3. go to /root/example-voting-app/k8s-specifications
+    --> Done
+4. [root@ip-172-31-7-102 k8s-specifications]# kubectl apply -f .
+    --> Done
+5. for voting and result pods, Observe that NodePort is assigned.
+    --> Yes, for Voting & result NodePort is assigned
+________________________________________________________________________________________________________________________________________________________________    
+[root@ip-172-31-23-162 ~]# kubectl get all
+NAME                          READY   STATUS    RESTARTS   AGE
+pod/db-b54cd94f4-42c8p        1/1     Running   0          50m
+pod/redis-868d64d78-r244b     1/1     Running   0          136m
+pod/result-5d57b59f4b-hs2pl   1/1     Running   0          136m
+pod/vote-94849dc97-g59wv      1/1     Running   0          58m
+pod/worker-dd46d7584-2wb4q    1/1     Running   1          52m
+
+NAME                 TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)          AGE
+service/db           ClusterIP   10.96.147.23     <none>        5432/TCP         136m
+service/kubernetes   ClusterIP   10.96.0.1        <none>        443/TCP          6d20h
+service/kubia2       ClusterIP   10.99.10.99      <none>        80/TCP           17h
+service/redis        ClusterIP   10.103.91.208    <none>        6379/TCP         136m
+service/result       NodePort    10.101.6.99      <none>        5001:31001/TCP   136m
+service/vote         NodePort    10.101.203.100   <none>        5000:31000/TCP   136m
+________________________________________________________________________________________________________________________________________________________________
+6. take your publicIP (your instance IP) : NodePort ► open 2 browsers , one for VOTING and one for Results.
+    --> MASTER :: 
+	Public IP:  13.215.172.32
+	Private IP:	172.31.23.162
+		
+   --> WORKER ::
+	Public IP:  13.250.12.108
+	Private IP:	172.31.22.169
+  
+## For VOTE page/Result page --> Refer Wordfile sent via Mail 
+
+7 try voting and see the results paralelly in results page.
+## For VOTE page/Result page --> Refer Wordfile sent via Mail 
+
+8. Now try to delete the Pods one by one (first voting Pod, then worker pod, then db pod) and see what happens to the voting and result app after deleting.
+
+--> After deleting vote pod, due to replicaSet=1 and deployment, immediately another replica of vote pod comes up while the existing is in terminating state, 
+     -->the VOTE UI application agnostic to this delete, only change is in container ID of voting POD
+     -->No affect on results UI , user able to see results agnostic to delete of vote pod
+     
+--> After deleting worker pod, due to replicaSet=1 and deployment, immediately another replica of worker pod comes up while the existing is in terminating state
+     -->the VOTE UI application agnostic to this delete, users continue to vote without any glitch
+     -->No affect on results UI , user able to see results agnostic to delete of vote pod, users continue to get result without any glitch
+     
+     ## Refer wordfile sent via mail
+
+9 Write your observations in a text file.
+--> Conclusion: Any deletion of vote pod/worker pod, application continues to work agnostic to delete pod action.
+
+10. what happens after db pod deletion. 
+--> After deleting DB POD, vote  app is working while results are not reflecting as user vote, also "number of votes" is blank now
+11. complete the assignment by making the result pod work. (if you delete db pod, results would not be captured.So repeat what we did in the class in order to make the result pod work.).
+
+--> To make result pod work again we need to delete result pod and it will come up afresh and then fresh votes and corresponding result is displayed.
+Reason being: When user deleted DB POD, the DB pod recreated (taken care by replica set & deployment) however it was synchronous means the result pod is still 
+              trying to connect to DB which is already deleted and utill the result pod is refresh it will not connect to newly created DB pod.
+              For this we need to have asynchronous socket connection to handle such scenario.
+              
+12. Write in the text file, what you did in order to make the result pod work.
+  --> Delete result pod and it will come up afresh and then fresh votes and corresponding result is displayed
+  --> Alternatively need to create DB pod with asynchronius/socket type.
+  
+  JARGONS:
+  Container
+Docker
+Image
+Object
+Microservices
+Kubernetes API Server
+etcd
+Pod
+Node
+Cluster
+Controller
+Kube-scheduler
+Kubectl
+Kubelet
+Master Node
+Worker Node
+Label
+Namespace
+ReplicaController
+ReplicaSet
+Selector
+Daemon Set
+Service
+Deployment
+kubeadm
+Job
+CronJob
+Kube-proxy
+RBAC (Role-Based Access Control)
+Toleratio
+Volume
+Persistent Volumes
+StatefulSet
+Taint
+Container Network Interface (CNI)
+Prometheus
+
+
